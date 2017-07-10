@@ -16,6 +16,7 @@ class Client(object):
 		self.pause_time = 0
 		self.get_next_packet()
 		self.spawned = False
+		self.spam_time = False
 		self.playerinfo = [[0,0] for _ in range(32)]
 	def get_next_packet(self):
 		meta = self.fh.read(8)
@@ -36,6 +37,9 @@ while True:
 	for cl in clients.values():
 		if cl.pause_time > 0:
 			continue
+		if cl.spam_time:
+			pkt = struct.pack("bbb", 17, 35, 2) + str(cl.timedelta).encode('cp437', 'replace') #chat message
+			cl.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
 		while cl.start_time + cl.timedelta <= time():
 			if ord(cl.data[0]) == 3: #input data
 				player, data = struct.unpack("xbb", cl.data)
@@ -102,3 +106,5 @@ while True:
 					pass
 				else:
 					cl.start_time = cl.start_time - skip
+			elif chat == "time":
+				cl.spam_time = not cl.spam_time
