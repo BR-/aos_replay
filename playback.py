@@ -95,3 +95,10 @@ while True:
 					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
 					pkt = struct.pack("bbb", 4, i, cl.playerinfo[i][1]) #weapon data
 					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+			elif chat[:3] == "ff ":
+				try:
+					skip = int(chat[3:])
+				except:
+					pass
+				else:
+					cl.start_time = cl.start_time - skip
