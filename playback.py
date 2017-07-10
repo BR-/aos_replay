@@ -13,8 +13,10 @@ class Client(object):
 		self.peer = peer
 		self.fh = fh
 		self.start_time = start_time
+		self.pause_time = 0
 		self.get_next_packet()
 		self.spawned = False
+		self.playerinfo = [[0,0] for _ in range(32)]
 	def get_next_packet(self):
 		meta = self.fh.read(8)
 		if len(meta) < 8:
@@ -32,7 +34,15 @@ clients = {}
 client_id = 0
 while True:
 	for cl in clients.values():
+		if cl.pause_time > 0:
+			continue
 		while cl.start_time + cl.timedelta <= time():
+			if ord(cl.data[0]) == 3: #input data
+				player, data = struct.unpack("xbb", cl.data)
+				cl.playerinfo[player][0] = data
+			elif ord(cl.data[0]) == 4: #weapon data
+				player, data = struct.unpack("xbb", cl.data)
+				cl.playerinfo[player][1] = data
 			cl.peer.send(0, enet.Packet(cl.data, enet.PACKET_FLAG_RELIABLE))
 			try:
 				cl.get_next_packet()
@@ -59,7 +69,29 @@ while True:
 			del clients[event.peer.data]
 		print("lost client connection", event.peer.data)
 	elif event.type == enet.EVENT_TYPE_RECEIVE:
-		if not clients[event.peer.data].spawned:
-			clients[event.peer.data].spawned = True
+		cl = clients[event.peer.data]
+		if not cl.spawned:
+			cl.spawned = True
 			pkt = struct.pack("bbbbfff16s", 12, VIEWER_PLAYER_ID, 1, -1, 255., 255., 1., "asd")
 			event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+		elif ord(event.packet.data[0]) == 17:
+			chat = event.packet.data[3:-1].decode('cp437', 'replace')
+			if chat == "spawn":
+				cl.spawned = True
+				pkt = struct.pack("bbbbfff16s", 12, VIEWER_PLAYER_ID, 1, -1, 255., 255., 1., "asd") #create player
+				event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+			elif chat == "pause" and cl.pause_time == 0:
+				cl.pause_time = time()
+				for i in range(32):
+					pkt = struct.pack("bbb", 3, i, 0) #input data
+					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+					pkt = struct.pack("bbb", 4, i, 0) #weapon data
+					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+			elif chat == "unpause" and cl.pause_time > 0:
+				cl.start_time += time() - cl.pause_time
+				cl.pause_time = 0
+				for i in range(32):
+					pkt = struct.pack("bbb", 3, i, cl.playerinfo[i][0]) #input data
+					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+					pkt = struct.pack("bbb", 4, i, cl.playerinfo[i][1]) #weapon data
+					event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
