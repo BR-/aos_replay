@@ -1,7 +1,5 @@
 from __future__ import print_function
 
-VIEWER_PLAYER_ID = 31
-
 import argparse
 parser  = argparse.ArgumentParser(description="Playback some gameplay")
 parser.add_argument('file', default='replay.demo', help="File to read from")
@@ -18,6 +16,7 @@ class Client(object):
 		self.spawned = False
 		self.spam_time = False
 		self.playerinfo = [[0,0] for _ in range(32)]
+		self.playerid = None
 	def get_next_packet(self):
 		meta = self.fh.read(8)
 		if len(meta) < 8:
@@ -25,7 +24,7 @@ class Client(object):
 		self.timedelta, size = struct.unpack("fi", meta)
 		self.data = self.fh.read(size)
 		if ord(self.data[0]) == 15: # state data
-			self.data = self.data[0] + chr(VIEWER_PLAYER_ID) + self.data[2:] #overwrite player id with 32
+			self.playerid = ord(self.data[1])
 import struct
 import enet
 from time import time
@@ -75,15 +74,28 @@ while True:
 	elif event.type == enet.EVENT_TYPE_RECEIVE:
 		cl = clients[event.peer.data]
 		if not cl.spawned:
+			if cl.playerid is None:
+				print("error: could not figure out player id, guessing! use the command 'id X' to fix")
+				cl.playerid = 0
 			cl.spawned = True
-			pkt = struct.pack("bbbbfff16s", 12, VIEWER_PLAYER_ID, 1, -1, 255., 255., 1., "asd")
+			pkt = struct.pack("bbbbfff16s", 12, cl.playerid, 1, -1, 255., 255., 1., "")
 			event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
 		elif ord(event.packet.data[0]) == 17:
 			chat = event.packet.data[3:-1].decode('cp437', 'replace')
 			if chat == "spawn":
+				if cl.playerid is None:
+					print("error: could not figure out player id, guessing! use the command 'id X' to fix")
+					cl.playerid = 0
 				cl.spawned = True
-				pkt = struct.pack("bbbbfff16s", 12, VIEWER_PLAYER_ID, 1, -1, 255., 255., 1., "asd") #create player
+				pkt = struct.pack("bbbbfff16s", 12, cl.playerid, 1, -1, 255., 255., 1., "asd") #create player
 				event.peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+			elif chat[:3] == "id ":
+				try:
+					playerid = int(chat[3:])
+				except:
+					pass
+				else:
+					cl.playerid = playerid
 			elif chat == "pause" and cl.pause_time == 0:
 				cl.pause_time = time()
 				for i in range(32):
