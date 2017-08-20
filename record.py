@@ -1,3 +1,5 @@
+FILE_VERSION = 0
+
 import argparse
 parser  = argparse.ArgumentParser(description="Record some gameplay")
 parser.add_argument('ip', default='localhost', help="The server's IP")
@@ -12,6 +14,7 @@ con = enet.Host(None, 1, 1)
 con.compress_with_range_coder()
 peer = con.connect(enet.Address(args.ip, args.port), 1, 3)
 with open(args.file, "wb") as fh:
+	fh.write(struct.pack('B', FILE_VERSION))
 	while True:
 		try:
 			event = con.service(0)
@@ -27,5 +30,5 @@ with open(args.file, "wb") as fh:
 			break
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
 			#print(hex(ord(event.packet.data[0])))
-			fh.write(struct.pack('fi', time() - start_time, len(event.packet.data)))
+			fh.write(struct.pack('fH', time() - start_time, len(event.packet.data)))
 			fh.write(event.packet.data)

@@ -1,4 +1,7 @@
 from __future__ import print_function
+import sys
+
+FILE_VERSION = 0
 
 import argparse
 parser  = argparse.ArgumentParser(description="Playback some gameplay")
@@ -6,10 +9,26 @@ parser.add_argument('file', default='replay.demo', help="File to read from")
 parser.add_argument('port', default=32887, type=int, help="The port to run on")
 args = parser.parse_args()
 
+import struct
+with open(args.file, "rb") as fh:
+	fmt = "B"
+	fmtlen = struct.calcsize(fmt)
+	data = fh.read(fmtlen)
+	file_version, = struct.unpack(fmt, data)
+	if FILE_VERSION != file_version:
+		if FILE_VERSION < file_version:
+			print("This demo was recorded on a newer version of aos_replay.")
+		elif FILE_VERSION > file_version:
+			print("This demo was recorded on an older version of aos_replay.")
+		print("aos_replay version: %d" % FILE_VERSION)
+		print("Demo version: %d" % file_version)
+		sys.exit(1)
+
 class Client(object):
 	def __init__(self, peer, fh, start_time):
 		self.peer = peer
 		self.fh = fh
+		self.fh.read(struct.calcsize("B"))
 		self.start_time = start_time
 		self.pause_time = 0
 		self.get_next_packet()
@@ -18,14 +37,16 @@ class Client(object):
 		self.playerinfo = [[0,0] for _ in range(32)]
 		self.playerid = None
 	def get_next_packet(self):
-		meta = self.fh.read(8)
-		if len(meta) < 8:
+		fmt = "fH"
+		fmtlen = struct.calcsize(fmt)
+		meta = self.fh.read(fmtlen)
+		if len(meta) < fmtlen:
 			raise EOFError("replay file finished")
-		self.timedelta, size = struct.unpack("fi", meta)
+		self.timedelta, size = struct.unpack(fmt, meta)
 		self.data = self.fh.read(size)
 		if ord(self.data[0]) == 15: # state data
 			self.playerid = ord(self.data[1])
-import struct
+
 import enet
 from time import time
 host = enet.Host(enet.Address('localhost', args.port), 128, 1)
