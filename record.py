@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 FILE_VERSION = 1
 
 import argparse
@@ -30,7 +32,11 @@ with open(args.file, "wb") as fh:
 			print('connected to server')
 			start_time = time()
 		elif event.type == enet.EVENT_TYPE_DISCONNECT:
-			print('lost connection to server')
+			try:
+				reason = ["generic error", "banned", "kicked", "wrong version", "server is full"][event.data]
+			except KeyError:
+				reason = "unknown reason (%s)" % event.data
+			print('lost connection to server:', reason)
 			break
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
 			#print(hex(ord(event.packet.data[0])))
