@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 
-FILE_VERSION = 0
+FILE_VERSION = 1
 
 import argparse
 parser  = argparse.ArgumentParser(description="Playback some gameplay")
@@ -11,10 +11,10 @@ args = parser.parse_args()
 
 import struct
 with open(args.file, "rb") as fh:
-	fmt = "B"
+	fmt = "BB"
 	fmtlen = struct.calcsize(fmt)
 	data = fh.read(fmtlen)
-	file_version, = struct.unpack(fmt, data)
+	file_version, aos_version = struct.unpack(fmt, data)
 	if FILE_VERSION != file_version:
 		if FILE_VERSION < file_version:
 			print("This demo was recorded on a newer version of aos_replay.")
@@ -28,7 +28,7 @@ class Client(object):
 	def __init__(self, peer, fh, start_time):
 		self.peer = peer
 		self.fh = fh
-		self.fh.read(struct.calcsize("B"))
+		self.fh.read(struct.calcsize("BB"))
 		self.start_time = start_time
 		self.pause_time = 0
 		self.get_next_packet()
@@ -83,10 +83,14 @@ while True:
 	if event is None:
 		continue
 	elif event.type == enet.EVENT_TYPE_CONNECT:
-		event.peer.data = str(client_id)
-		client_id += 1
-		clients[event.peer.data] = Client(event.peer, open(args.file, "rb"), time())
-		print("received client connection", event.peer.data)
+		if event.peer.eventData == aos_version:
+			event.peer.data = str(client_id)
+			client_id += 1
+			clients[event.peer.data] = Client(event.peer, open(args.file, "rb"), time())
+			print("received client connection", event.peer.data)
+		else:
+			print("WRONG CLIENT VERSION: replay is version %s and client was version %s" % (aos_version, event.peer.eventData))
+			event.peer.disconnect_now(3) #ERROR_WRONG_VERSION
 	elif event.type == enet.EVENT_TYPE_DISCONNECT:
 		if event.peer.data in clients:
 			clients[event.peer.data].fh.close()
