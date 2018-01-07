@@ -5,7 +5,7 @@ FILE_VERSION = 1
 import argparse
 parser  = argparse.ArgumentParser(description="Record some gameplay")
 parser.add_argument('ip', help="The server's IP")
-parser.add_argument('port', type=int, help="The server's port")
+parser.add_argument('port', type=int, nargs='?', default=-1, help="The server's port (default: 32887)")
 parser.add_argument('file', help="File to save to")
 versiongroup = parser.add_mutually_exclusive_group()
 versiongroup.add_argument('-75', action='store_const', dest='version', const=3, help="Use if the server is 0.75 (default)")
@@ -13,8 +13,20 @@ versiongroup.add_argument('-76', action='store_const', dest='version', const=4, 
 parser.set_defaults(version=3)
 args = parser.parse_args()
 
-if args.ip.startswith("aos://"):
-	dec = int(args.ip[6:])
+do_aos_conversion = args.ip.startswith("aos://")
+if do_aos_conversion:
+	args.ip = args.ip[6:]
+
+if args.port == -1:
+	try:
+		ip, port = args.ip.rsplit(':', 1)
+		args.port = int(port)
+		args.ip = ip
+	except ValueError:
+		args.port = 32887
+
+if do_aos_conversion:
+	dec = int(args.ip)
 	ip = ""
 	for _ in range(4):
 		ip += str(dec % 256) + "."
