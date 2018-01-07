@@ -37,6 +37,14 @@ if do_aos_conversion:
 		sys.exit()
 	args.ip = ip[:-1]
 
+#TODO: fix race condition
+import os
+if os.path.exists(args.file):
+	i = 1
+	while os.path.exists(args.file + "-" + str(i)):
+		i += 1
+	args.file += "-" + str(i)
+
 import struct
 import enet
 from time import time
