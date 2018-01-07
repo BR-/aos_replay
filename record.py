@@ -4,14 +4,26 @@ FILE_VERSION = 1
 
 import argparse
 parser  = argparse.ArgumentParser(description="Record some gameplay")
-parser.add_argument('ip', default='localhost', help="The server's IP")
-parser.add_argument('port', default=32887, type=int, help="The server's port")
-parser.add_argument('file', default='replay.demo', help="File to save to")
+parser.add_argument('ip', help="The server's IP")
+parser.add_argument('port', type=int, help="The server's port")
+parser.add_argument('file', help="File to save to")
 versiongroup = parser.add_mutually_exclusive_group()
 versiongroup.add_argument('-75', action='store_const', dest='version', const=3, help="Use if the server is 0.75 (default)")
 versiongroup.add_argument('-76', action='store_const', dest='version', const=4, help="Use if the server is 0.76")
 parser.set_defaults(version=3)
 args = parser.parse_args()
+
+if args.ip.startswith("aos://"):
+	dec = int(args.ip[6:])
+	ip = ""
+	for _ in range(4):
+		ip += str(dec % 256) + "."
+		dec //= 256
+	if dec != 0:
+		print("ERROR: AoS address not valid?")
+		import sys
+		sys.exit()
+	args.ip = ip[:-1]
 
 import struct
 import enet
