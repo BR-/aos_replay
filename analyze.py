@@ -38,7 +38,7 @@ meta_fmt = "fH"
 meta_fmtlen = struct.calcsize(meta_fmt)
 
 last_world_update = 0
-last_shitty_world_update = 0
+last_shitty_start_world_update = 0
 shitty = []
 from collections import namedtuple
 ShitWorldUpdate = namedtuple('ShitWorldUpdate', ['time', 'lag', 'dt'])
@@ -69,8 +69,8 @@ while True:
 	elif packetid == 2: #world update
 		diff = timedelta - last_world_update
 		if diff > 0.5: #should be sent 10/s.
-			shitty.append(ShitWorldUpdate(round(timedelta, 1), round(diff, 2), round(timedelta - last_shitty_world_update, 1)))
-			last_shitty_world_update = timedelta
+			shitty.append(ShitWorldUpdate(round(last_world_update, 1), round(diff, 2), round(last_world_update - last_shitty_start_world_update, 1)))
+			last_shitty_start_world_update = last_world_update
 		last_world_update = timedelta
 
 print("{:.0f}\treplay file finished".format(timedelta))
@@ -94,4 +94,6 @@ def pprinttable(rows):
 	for r in rows:
 		print(pattern % tuple(r))
 
+del shitty[0]
+shitty[0] = ShitWorldUpdate(shitty[0].time, shitty[0].lag, '-')
 pprinttable(shitty)
