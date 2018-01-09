@@ -55,7 +55,7 @@ with open(args.file, "wb") as fh:
 	fh.write(struct.pack('BB', FILE_VERSION, args.version))
 	while True:
 		try:
-			event = con.service(0)
+			event = con.service(1000)
 		except IOError:
 			continue
 		if event is None:
