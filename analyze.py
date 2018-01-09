@@ -37,6 +37,11 @@ team_names[-1] = "Spectator"
 meta_fmt = "fH"
 meta_fmtlen = struct.calcsize(meta_fmt)
 
+last_world_update = 0
+last_shitty_world_update = 0
+shitty = []
+from collections import namedtuple
+ShitWorldUpdate = namedtuple('ShitWorldUpdate', ['time', 'lag', 'dt'])
 while True:
 	meta = fh.read(meta_fmtlen)
 	if len(meta) < meta_fmtlen:
@@ -48,7 +53,6 @@ while True:
 		_, pid, _, team, _, _, _ = struct.unpack("<BBBbfff", data[:struct.calcsize("<BBBbfff")])
 		name = data[struct.calcsize("<BBBbfff"):].rstrip('\0').decode('cp437', 'replace')
 		players[pid] = (team_names[team], name)
-		print("{0:.0f}\t({2} has joined {1} team)".format(timedelta, *players[pid]))
 	elif packetid == 15: #state data
 		_, _, _, _, _, _, _, _, _, _, _, team1, team2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = struct.unpack("<BBBBBBBBBBB10s10sBBBBBffffffffffff", data)
 		team_names[0] = team1.rstrip('\0').decode('cp437', 'replace')
@@ -62,5 +66,32 @@ while True:
 			print("{:.0f}\t(TEAM) [{}] {}: {}".format(timedelta, *(players[pid] + (msg,))))
 		elif type == 2: #system msg
 			print("{:.0f}\t[SYSTEM] {}".format(timedelta, msg))
+	elif packetid == 2: #world update
+		diff = timedelta - last_world_update
+		if diff > 0.5: #should be sent 10/s.
+			shitty.append(ShitWorldUpdate(round(timedelta, 1), round(diff, 2), round(timedelta - last_shitty_world_update, 1)))
+			last_shitty_world_update = timedelta
+		last_world_update = timedelta
 
 print("{:.0f}\treplay file finished".format(timedelta))
+
+def pprinttable(rows):
+	headers = rows[0]._fields
+	lens = []
+	for i in range(len(rows[0])):
+		l = 0
+		for r in rows:
+			if len(str(r[i])) > l:
+				l = len(str(r[i]))
+		lens.append(l)
+	formats = []
+	for i in range(len(rows[0])):
+		formats.append("%%-%ds" % lens[i])
+	pattern = " | ".join(formats)
+	separator = "-+-".join(['-' * n for n in lens])
+	print(pattern % tuple(headers))
+	print(separator)
+	for r in rows:
+		print(pattern % tuple(r))
+
+pprinttable(shitty)
