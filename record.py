@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+
 FILE_VERSION = 1
 
 import argparse
@@ -45,6 +46,9 @@ if os.path.exists(args.file):
 		i += 1
 	args.file += "-" + str(i)
 
+seen_map_start = False
+print("python record.py {} {} {} -76".format(args.ip, args.port, args.file + "-mapchange"))
+
 import struct
 import enet
 from time import time
@@ -74,3 +78,10 @@ with open(args.file, "wb") as fh:
 			#print(hex(ord(event.packet.data[0])))
 			fh.write(struct.pack('fH', time() - start_time, len(event.packet.data)))
 			fh.write(event.packet.data)
+			if ord(event.packet.data[0]) == 18:
+				if seen_map_start:
+					# restart
+					import os
+					os.system("python record.py {} {} {} -76".format(args.ip, args.port, args.file + "-mapchange"))
+					os.exit(0)
+				seen_map_start = True
