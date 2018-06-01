@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+
 FILE_VERSION = 1
 
 import argparse
@@ -51,6 +52,7 @@ from time import time
 con = enet.Host(None, 1, 1)
 con.compress_with_range_coder()
 peer = con.connect(enet.Address(args.ip, args.port), 1, args.version)
+seen_map_start = False
 with open(args.file, "wb") as fh:
 	fh.write(struct.pack('BB', FILE_VERSION, args.version))
 	while True:
@@ -74,3 +76,8 @@ with open(args.file, "wb") as fh:
 			#print(hex(ord(event.packet.data[0])))
 			fh.write(struct.pack('fH', time() - start_time, len(event.packet.data)))
 			fh.write(event.packet.data)
+			if args.version == 4 and ord(event.packet.data[0]) == 18:
+				if seen_map_start:
+					pkt = struct.pack("bb", 31, 0)
+					peer.send(0, enet.Packet(pkt, enet.PACKET_FLAG_RELIABLE))
+				seen_map_start = True
