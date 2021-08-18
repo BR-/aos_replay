@@ -67,7 +67,8 @@ from time import time
 con = enet.Host(None, 1, 1)
 con.compress_with_range_coder()
 peer = con.connect(enet.Address(bytes(args.ip, "utf-8"), args.port), 1, args.version)
-if True:
+times = [0]
+try:
 	while True:
 		try:
 			event = con.service(1000)
@@ -87,4 +88,9 @@ if True:
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
 			if event.packet.data[0] == 2: # world update
 				beep.play(2)
+				times.append(time())
 				#print(time())
+except KeyboardInterrupt:
+	del times[0]
+	with open("foo.txt", "w") as fh:
+		fh.write("\n".join(map(str,times)))
