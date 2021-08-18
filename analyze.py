@@ -53,6 +53,10 @@ while True:
 		_, pid, _, team, _, _, _ = struct.unpack("<BBBbfff", data[:struct.calcsize("<BBBbfff")])
 		name = data[struct.calcsize("<BBBbfff"):].rstrip('\0').decode('cp437', 'replace')
 		players[pid] = (team_names[team], name)
+	elif packetid == 9: #existing player
+		_, pid, team, wpn, tool, kills, r,g,b = struct.unpack("<BBBBBIBBB", data[:struct.calcsize("<BBBBBIBBB")])
+		name = data[struct.calcsize("<BBBBBIBBB"):].rstrip('\0').decode('cp437', 'replace')
+		players[pid] = (team_names[team], name)
 	elif packetid == 15: #state data
 		_, _, _, _, _, _, _, _, _, _, _, team1, team2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = struct.unpack("<BBBBBBBBBBB10s10sBBBBBffffffffffff", data)
 		team_names[0] = team1.rstrip('\0').decode('cp437', 'replace')
@@ -72,6 +76,10 @@ while True:
 			shitty.append(ShitWorldUpdate(round(last_world_update, 1), round(diff, 2), round(last_world_update - last_shitty_start_world_update, 1)))
 			last_shitty_start_world_update = last_world_update
 		last_world_update = timedelta
+	elif packetid == 13: #block action
+		_, pid, type, x,y,z = struct.unpack("<BBBIII", data[:struct.calcsize("<BBBIII")])
+		if players[pid][1] == "2 MOMO":
+			print(timedelta, type, x, y, z)
 
 print("{:.0f}\treplay file finished".format(timedelta))
 

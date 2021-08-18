@@ -62,3 +62,4 @@ if True:
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
 			if ord(event.packet.data[0]) == 2: # world update
 				winsound.Beep(440, 50)
+				print(time())
