@@ -1,6 +1,31 @@
 from __future__ import print_function
 
-import winsound
+from array import array
+from time import sleep
+
+import pygame
+from pygame.mixer import Sound, get_init, pre_init
+
+pre_init(44100, -16, 1, 1024)
+pygame.init()
+import math
+#https://gist.github.com/ohsqueezy/6540433
+class Note(Sound):
+
+    def __init__(self, frequency, volume=.1):
+        self.frequency = frequency
+        Sound.__init__(self, self.build_samples())
+        self.set_volume(volume)
+
+    def build_samples(self):
+        sample_rate = pygame.mixer.get_init()[0]
+        period = int(round(sample_rate / self.frequency))
+        samples = array("h", [0] * period)
+        amplitude = 2 ** (abs(get_init()[1]) - 1) - 1
+        for time in range(period):
+            samples[time] = int(amplitude * math.sin(2 * 3.14159 * self.frequency * time / sample_rate))
+        return samples
+beep = Note(440)
 
 import argparse
 parser  = argparse.ArgumentParser(description="Beep beep beep beep beep")
@@ -41,7 +66,7 @@ import enet
 from time import time
 con = enet.Host(None, 1, 1)
 con.compress_with_range_coder()
-peer = con.connect(enet.Address(args.ip, args.port), 1, args.version)
+peer = con.connect(enet.Address(bytes(args.ip, "utf-8"), args.port), 1, args.version)
 if True:
 	while True:
 		try:
@@ -60,6 +85,6 @@ if True:
 			print('lost connection to server:', reason)
 			break
 		elif event.type == enet.EVENT_TYPE_RECEIVE:
-			if ord(event.packet.data[0]) == 2: # world update
-				winsound.Beep(440, 50)
-				print(time())
+			if event.packet.data[0] == 2: # world update
+				beep.play(2)
+				#print(time())
